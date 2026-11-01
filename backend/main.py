@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+
 from backend.database import close_db, init_db
+from backend.api.sessions import router as sessions_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,7 +13,4 @@ async def lifespan(app: FastAPI):
         await close_db()
 
 app = FastAPI(title='Empório da Música AI Agent', lifespan=lifespan)
-
-@app.get('/test')
-async def test():
-    return {'status': 'ok'}
+app.include_router(sessions_router)
