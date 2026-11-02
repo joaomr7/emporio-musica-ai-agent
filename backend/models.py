@@ -2,7 +2,7 @@ from tortoise import fields
 from tortoise.models import Model
 
 class Category(Model):
-    category_id = fields.IntField(pk=True)
+    category_id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=150)
     description = fields.TextField(null=True)
 
@@ -10,7 +10,7 @@ class Category(Model):
         table = 'categories'
 
 class Product(Model):
-    product_id = fields.IntField(pk=True)
+    product_id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255)
     category = fields.ForeignKeyField('models.Category', related_name='products')
     description = fields.TextField(null=True)
@@ -24,7 +24,7 @@ class Product(Model):
         table = 'products'
 
 class Promotion(Model):
-    promotion_id = fields.IntField(pk=True)
+    promotion_id = fields.IntField(primary_key=True)
     product = fields.ForeignKeyField('models.Product', related_name='promotions')
     discount_percent = fields.DecimalField(max_digits=5, decimal_places=2)
     description = fields.TextField(null=True)
@@ -34,7 +34,7 @@ class Promotion(Model):
         table = 'promotions'
 
 class Customer(Model):
-    customer_id = fields.IntField(pk=True)
+    customer_id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255)
     phone = fields.CharField(max_length=30)
     email = fields.CharField(max_length=255)
@@ -44,7 +44,7 @@ class Customer(Model):
         table = 'customers'
 
 class Order(Model):
-    order_id = fields.IntField(pk=True)
+    order_id = fields.IntField(primary_key=True)
     customer = fields.ForeignKeyField('models.Customer', related_name='orders')
     order_date = fields.DateField()
     status = fields.CharField(max_length=30)
@@ -58,7 +58,7 @@ class Order(Model):
         table = 'orders'
 
 class OrderItem(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     order = fields.ForeignKeyField('models.Order', related_name='items')
     product = fields.ForeignKeyField('models.Product', related_name='order_items')
     quantity = fields.IntField()
@@ -68,7 +68,7 @@ class OrderItem(Model):
         unique_together = (('order', 'product'),)
 
 class Session(Model):
-    id = fields.BigIntField(pk=True)
+    id = fields.BigIntField(primary_key=True)
     customer = fields.ForeignKeyField('models.Customer', related_name='sessions')
     status = fields.CharField(max_length=30, default='active')
     created_at = fields.DatetimeField(auto_now_add=True)
@@ -79,7 +79,7 @@ class Session(Model):
         table = 'sessions'
 
 class Message(Model):
-    id = fields.BigIntField(pk=True)
+    id = fields.BigIntField(primary_key=True)
     session = fields.ForeignKeyField('models.Session', related_name='messages')
     task = fields.ForeignKeyField('models.ProcessingTask', related_name='messages', null=True)
     role = fields.CharField(max_length=20)
@@ -90,7 +90,7 @@ class Message(Model):
         table = 'messages'
 
 class ProcessingTask(Model):
-    id = fields.BigIntField(pk=True)
+    id = fields.BigIntField(primary_key=True)
     session = fields.ForeignKeyField('models.Session', related_name='tasks')
     status = fields.CharField(max_length=30, default='pending')
     scheduled_at = fields.DatetimeField()

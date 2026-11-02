@@ -9,6 +9,7 @@ from tortoise.transactions import in_transaction
 from backend.api.dependencies import get_current_customer, get_session
 from backend.api.schemas import MessageCreate, MessageResponse, SessionResponse
 from backend.models import Customer, Message, Session
+from backend.queue import schedule_task
 
 router = APIRouter(prefix='/sessions', tags=['Sessions'])
 SESSION_TIMEOUT = timedelta(hours=24)
@@ -95,6 +96,9 @@ async def create_message(data: MessageCreate, session: Annotated[Session, Depend
 
         locked_session.updated_at = now
         await locked_session.save(using_db=connection, update_fields=['updated_at'])
+
+        # create task
+        await schedule_task(locked_session.id, connection)
 
     return MessageResponse(
         id=message.id,
