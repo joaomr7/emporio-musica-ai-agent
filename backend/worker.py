@@ -1,12 +1,46 @@
 import asyncio
 
+from datetime import timedelta
+
 from tortoise import timezone
 from tortoise.transactions import in_transaction
 
+from backend.agent.service import process_conversation
 from backend.database import close_db, init_db
 from backend.models import Message, ProcessingTask
 
 POLL_INTERVAL = 1
+MAX_ATTEMPTS = 3
+RETRY_DELAY = 10
+TASK_TIMEOUT = 300
+
+async def recover_tasks(startup: bool = False):
+    now = timezone.now()
+    expired_at = now - timedelta(seconds=TASK_TIMEOUT)
+
+    async with in_transaction() as connection:
+        tasks = await ProcessingTask.filter(
+            status__in=['processing', 'failed'],
+            attempts__lt=MAX_ATTEMPTS
+        ).using_db(connection).select_for_update(skip_locked=True)
+
+        recovered = 0
+
+        for task in tasks:
+            if task.status == 'processing' and not startup:
+                if task.started_at is not None and task.started_at > expired_at:
+                    continue
+
+            task.status = 'pending'
+            task.scheduled_at = now
+            task.started_at = None
+            task.completed_at = None
+            task.error = None
+            await task.save(using_db=connection)
+
+            recovered += 1
+
+    return recovered
 
 async def reserve_task():
     async with in_transaction() as connection:
@@ -23,8 +57,20 @@ async def reserve_task():
         messages = await Message.filter(
             session_id=task.session_id,
             role='user',
-            task_id=None
+            task_id=task.id
         ).using_db(connection).order_by('created_at', 'id')
+
+        if not messages and task.attempts == 0:
+            messages = await Message.filter(
+                session_id=task.session_id,
+                role='user',
+                task_id=None
+            ).using_db(connection).order_by('created_at', 'id')
+
+            if messages:
+                await Message.filter(
+                    id__in=[message.id for message in messages]
+                ).using_db(connection).update(task_id=task.id)
 
         if not messages:
             task.status = 'failed'
@@ -32,7 +78,11 @@ async def reserve_task():
             await task.save(using_db=connection)
             return None
 
-        await Message.filter(id__in=[message.id for message in messages]).using_db(connection).update(task_id=task.id)
+        if task.attempts >= MAX_ATTEMPTS:
+            task.status = 'failed'
+            task.error = 'Maximum attempts reached'
+            await task.save(using_db=connection)
+            return None
 
         task.status = 'processing'
         task.started_at = timezone.now()
@@ -41,12 +91,9 @@ async def reserve_task():
 
         return task.id, task.session_id, [message.content for message in messages]
 
-async def process_messages(messages: list[str]) -> str:
-    return f'Recebi suas mensagens: {" | ".join(messages)}'
-
-async def execute_task(task_id: int, session_id: int, messages: list[str]):
+async def execute_task(task_id: int, session_id: int):
     try:
-        response = await process_messages(messages)
+        response = await process_conversation(session_id, task_id)
 
         async with in_transaction() as connection:
             await Message.create(
@@ -64,27 +111,46 @@ async def execute_task(task_id: int, session_id: int, messages: list[str]):
             )
 
     except Exception as exc:
-        await ProcessingTask.filter(id=task_id).update(
-            status='failed',
-            error=str(exc)
-        )
+        async with in_transaction() as connection:
+            task = await ProcessingTask.filter(id=task_id).using_db(
+                connection
+            ).select_for_update().first()
+
+            if task is not None:
+                task.error = str(exc)
+                task.started_at = None
+
+                if task.attempts < MAX_ATTEMPTS:
+                    task.status = 'pending'
+                    task.scheduled_at = timezone.now() + timedelta(seconds=RETRY_DELAY)
+                else:
+                    task.status = 'failed'
+
+                await task.save(using_db=connection)
+
         raise
 
 async def run_worker():
     await init_db()
 
     try:
+        recovered = await recover_tasks(startup=True)
+
+        if recovered:
+            print(f'Recovered {recovered} tasks')
+
         while True:
+            await recover_tasks()
             reserved = await reserve_task()
 
             if reserved is not None:
-                task_id, session_id, messages = reserved
+                task_id, session_id, _ = reserved
 
                 try:
-                    await execute_task(task_id, session_id, messages)
+                    await execute_task(task_id, session_id)
                     print(f'Task {task_id} completed')
                 except Exception as exc:
-                    print(f'Task {task_id} failed: {exc}')
+                    print(f'Task {task_id} execution failed: {exc}')
             else:
                 await asyncio.sleep(POLL_INTERVAL)
 

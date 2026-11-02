@@ -1,5 +1,7 @@
 import asyncio
 
+from unittest.mock import AsyncMock, patch
+
 from tortoise import timezone
 from tortoise.transactions import in_transaction
 
@@ -29,10 +31,10 @@ async def check_worker():
             await Message.create(session=session, role='user', content='Até R$ 1000', using_db=connection)
             task = await schedule_task(session.id, connection)
 
-        # task can't be reserved until it's schedule time
+        # Task can't be reserved until its scheduled time
         assert await reserve_task() is None
 
-        # update shedule to now
+        # Update schedule to now
         task.scheduled_at = timezone.now()
         await task.save(update_fields=['scheduled_at'])
 
@@ -49,10 +51,21 @@ async def check_worker():
         assert task.status == 'processing'
         assert task.attempts == 1
 
-        # same task can't be reserved again
+        # Same task can't be reserved again
         assert await reserve_task() is None
 
-        await execute_task(task_id, session_id, messages)
+        # Mock agent execution
+        expected_response = 'Encontrei algumas opções de violões até R$ 1.000.'
+
+        with patch(
+            'backend.worker.process_conversation',
+            new_callable=AsyncMock
+        ) as mock_agent:
+            mock_agent.return_value = expected_response
+
+            await execute_task(task_id, session_id)
+
+            mock_agent.assert_awaited_once_with(session_id, task_id)
 
         task = await ProcessingTask.get(id=task_id)
         assert task.status == 'completed'
@@ -62,7 +75,7 @@ async def check_worker():
 
         assert len(saved_messages) == 3
         assert [message.role for message in saved_messages] == ['user', 'user', 'assistant']
-        assert saved_messages[2].content == 'Recebi suas mensagens: Quero um violão | Até R$ 1000'
+        assert saved_messages[2].content == expected_response
         assert all(message.task_id == task_id for message in saved_messages)
 
     finally:
