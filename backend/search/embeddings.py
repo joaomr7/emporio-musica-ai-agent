@@ -4,7 +4,7 @@ from langchain_openai import OpenAIEmbeddings
 
 from backend.config import settings
 
-EMBEDDING_DIMENSIONS = 1024
+EMBEDDING_DIMENSIONS = settings.embedding_dimensions
 MODEL_VERSION = f'{settings.embedding_model}:product-v1'
 
 @lru_cache(maxsize=1)
@@ -13,6 +13,7 @@ def get_embeddings():
         model=settings.embedding_model,
         base_url=settings.llm_base_url,
         api_key=settings.llm_api_key,
+        dimensions=EMBEDDING_DIMENSIONS,
         check_embedding_ctx_length=False,
         chunk_size=32
     )

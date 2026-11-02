@@ -39,10 +39,12 @@ async def process_conversation(session_id: int, task_id: int) -> str:
 
     response = result['messages'][-1]
 
-    if not isinstance(response, AIMessage) or not isinstance(response.content, str):
-        raise ValueError('The agent did not return a valid textual response')
+    if not isinstance(response, AIMessage):
+        raise ValueError('The agent did not return a valid message')
 
-    if not response.content.strip():
+    content = response.text
+
+    if not content.strip():
         raise ValueError('The agent returned an empty response')
 
-    return response.content
+    return content

@@ -29,16 +29,16 @@ async def main():
             )
 
             print(f'\nQuestion: {question}')
-            print(f'Response: {result["messages"][-1].content}')
+            print(f'Response: {result["messages"][-1].text}')
 
-            for message in result['messages']:
-                if isinstance(message, AIMessage) and message.tool_calls:
-                    for call in message.tool_calls:
-                        print(f'Tool: {call["name"]}')
-                        print(f'Arguments: {call["args"]}')
+            #for message in result['messages']:
+            #    if isinstance(message, AIMessage) and message.tool_calls:
+            #        for call in message.tool_calls:
+            #            print(f'Tool: {call["name"]}')
+            #            print(f'Arguments: {call["args"]}')
 
-                elif isinstance(message, ToolMessage):
-                    print(f'Result: {message.content}')
+            #    elif isinstance(message, ToolMessage):
+            #        print(f'Result: {message.content}')
 
     finally:
         await close_db()

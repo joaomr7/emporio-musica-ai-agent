@@ -7,7 +7,7 @@ def get_llm() -> ChatOpenAI:
         base_url=settings.llm_base_url,
         model=settings.llm_model,
         api_key=settings.llm_api_key,
-        temperature=0,
+        reasoning_effort='low',
         timeout=120,
         max_retries=1
     )
