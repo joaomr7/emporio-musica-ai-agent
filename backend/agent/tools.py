@@ -11,11 +11,10 @@ POLICIES_PATH = Path(__file__).resolve().parent.parent / 'policies' / 'store.jso
 
 @tool
 async def list_categories() -> str:
-    '''Consulte os tipos de instrumentos do catálogo e seus IDs antes de filtrar produtos por categoria.
+    '''Lista as categorias de instrumentos disponíveis no catálogo.
 
-    Não recebe parâmetros. Retorna uma string JSON contendo uma lista ordenada por nome,
-    com category_id (inteiro), name (nome) e description (descrição ou null). Use o category_id retornado
-    em search_products.
+    Use para conhecer os tipos de instrumentos vendidos ou obter o category_id
+    necessário para filtrar search_products. Retorna category_id, name e description.
     '''
     categories = await Category.all().order_by('name')
 
@@ -37,16 +36,23 @@ async def search_products(
     limit: int = 10,
     offset: int = 0
 ) -> str:
-    '''Consulta produtos com filtros e paginação.
+    '''Busca produtos no catálogo com filtros e paginação.
 
-    Com query, utiliza busca vetorial por similaridade semântica.
-    Sem query, utiliza apenas filtros SQL e ordenação por preço.
+    Use query para buscas por nome, marca, características ou finalidade.
+    Sem query, aplica filtros estruturados e ordena por preço.
 
-    category_id identifica a categoria, max_price define o preço máximo
-    e available_only restringe a produtos ativos com estoque.
+    category_id filtra a categoria, max_price limita o preço e
+    available_only restringe a produtos ativos com estoque.
 
-    Para consultar outras páginas, utilize next_offset.
+    limit define a quantidade de resultados (1 a 30) e offset a posição inicial.
+    Use next_offset para consultar outras páginas.
+
+    Resultados semânticos são aproximações; não assuma que todas as características
+    solicitadas estão presentes. Para detalhes ou promoções, use get_product.
     '''
+    limit = max(1, min(limit, 30))
+    offset = max(0, offset)
+
     result = await retrieve_products(
         query=query,
         category_id=category_id,
@@ -60,16 +66,18 @@ async def search_products(
 
 @tool
 async def get_product(product_id: int) -> str:
-    '''Consulte os detalhes e as promoções ativas de um produto específico.
+    '''Consulta informações detalhadas e promoções ativas de um produto.
 
-    product_id é o ID inteiro obtido em search_products; se você só conhece o nome,
-    busque o produto primeiro. Retorna uma string JSON com product_id, name, category
-    (nome), description, price_brl, stock_quantity, status, specs (dados técnicos ou null) e promotions.
-    promotions contém apenas promoções marcadas como ativas, cada uma com
-    discount_percent e description.
-    O retorno não calcula o preço com desconto nem valida regras de acúmulo; consulte
-    get_policy com topic=promotions para essas regras. Pode retornar produtos inativos
-    ou sem estoque.
+    Use product_id obtido em search_products. Se conhecer apenas o nome,
+    busque o produto antes.
+
+    Retorna identificação, nome, categoria, descrição, preço, estoque,
+    status, especificações técnicas e promoções ativas.
+
+    O preço retornado é o preço cadastrado, sem aplicação automática
+    de descontos. Consulte get_policy(topic='promotions') para regras comerciais.
+
+    Não considere produtos inativos ou sem estoque como disponíveis para compra.
     '''
     product = await Product.get_or_none(product_id=product_id).select_related('category')
 
@@ -98,14 +106,16 @@ async def get_product(product_id: int) -> str:
 
 @tool
 async def get_my_orders(runtime: ToolRuntime[AgentContext], limit: int = 10, offset: int = 0) -> str:
-    '''Liste os pedidos do cliente atual com paginação ou descubra o ID de uma compra.
+    '''Lista os pedidos pertencentes ao cliente autenticado no contexto.
 
-    limit aceita 1 a 30 (padrão 10) e offset é a quantidade de pedidos a pular, não negativa (padrão 0).
-    Retorna uma string JSON com total (total de pedidos do cliente), limit, offset,
-    has_more, next_offset (próximo deslocamento ou null) e orders (pedidos desta página).
-    Os pedidos são ordenados do mais recente para o mais antigo, com order_id,
-    order_date (YYYY-MM-DD), status e total_brl.
-    Para continuar, use next_offset quando has_more=True, mantendo o mesmo limit.
+    Use para consultar compras anteriores ou localizar um pedido.
+    Retorna data, status, total e identificador de cada pedido.
+
+    Aceita limit de 1 a 30 e offset a partir de zero.
+    Use next_offset quando has_more for verdadeiro.
+    Para detalhes de uma compra, utilize get_order.
+
+    O cliente é identificado automaticamente pelo contexto.
     '''
     if not 1 <= limit <= 30:
         return 'O limite deve estar entre 1 e 30.'
@@ -136,13 +146,16 @@ async def get_my_orders(runtime: ToolRuntime[AgentContext], limit: int = 10, off
 
 @tool
 async def get_order(order_id: int, runtime: ToolRuntime[AgentContext]) -> str:
-    '''Consulte itens, pagamento, status e rastreamento de um pedido do cliente atual.
+    '''Consulta os detalhes de um pedido pertencente ao cliente atual.
 
-    order_id é o ID inteiro da compra, informado pelo cliente ou obtido em get_my_orders.
-    Retorna uma string JSON com order_id, order_date (YYYY-MM-DD), status, total_brl,
-    payment_method (código da forma de pagamento),
-    tracking_code, estimated_delivery (YYYY-MM-DD ou null), notes e items.
-    Cada item contém product_id, name e quantity. tracking_code e notes podem ser null.
+    Use order_id informado pelo cliente ou obtido em get_my_orders.
+
+    Retorna itens, status, pagamento, total, rastreamento e previsão
+    de entrega, quando disponíveis.
+
+    A previsão de entrega não comprova que o pedido foi entregue.
+    Campos ausentes ou nulos não devem ser presumidos.
+    O acesso é restrito aos pedidos do cliente atual.
     '''
     
     order = await Order.get_or_none(
@@ -176,19 +189,23 @@ async def get_order(order_id: int, runtime: ToolRuntime[AgentContext]) -> str:
 
 @tool
 def get_policy(topic: str) -> str:
-    '''Consulte informações oficiais e regras gerais da loja por tópico.
+    '''Consulta as políticas e informações cadastradas da loja.
 
-    Informe topic exatamente como uma destas chaves:
-    - store: nome, endereço, telefone, horários e ramo de atuação.
-    - payment: formas de pagamento, desconto no Pix, parcelamento e ressalvas.
-    - returns: prazos para arrependimento, reembolso e troca por defeito.
-    - shipping: condições e valores de frete, transportadoras e prazos gerais.
-    - promotions: regras de acúmulo de descontos e condições das promoções.
-    - service: canais de atendimento e tratamento e prazo de resposta a reclamações.
-    - warranty: prazo de garantia legal, garantia do fabricante e exclusões.
-    - privacy: uso dos dados pessoais, consentimento e solicitação de exclusão.
+    Informe topic com uma das seguintes opções:
+    - store: endereço, contato e funcionamento.
+    - payment: formas de pagamento e parcelamento.
+    - returns: arrependimento, devoluções e reembolsos.
+    - shipping: frete e estimativas de entrega.
+    - promotions: descontos e condições promocionais.
+    - service: canais de atendimento e reclamações.
+    - warranty: garantia e tratamento de defeitos.
+    - privacy: tratamento de dados pessoais.
 
-    Retorna uma string JSON com o objeto do tópico solicitado, contendo suas regras.
+    Retorna as informações cadastradas para o tópico solicitado.
+
+    Informe somente condições explicitamente previstas no retorno.
+    Não presuma prazos, valores, exceções ou garantias ausentes.
+    Se faltar uma condição essencial, indique que precisa ser confirmada.
     '''
     with POLICIES_PATH.open(encoding='utf-8') as file:
         policies = json.load(file)

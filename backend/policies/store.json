@@ -11,28 +11,32 @@
     "business": "Venda exclusiva de instrumentos musicais, sem acessórios"
   },
   "payment": {
-    "methods": ["PIX", "Débito", "Crédito", "Boleto"],
+    "methods": [
+      "PIX",
+      "Débito",
+      "Crédito",
+      "Boleto"
+    ],
     "pix_discount_percent": 5,
     "pix_discount_with_promotions": false,
     "credit_max_installments": 12,
     "installments": {
-      "1_to_3": "Sem juros, conforme condições mínimas da loja",
       "4_to_6": "Sem juros, parcela mínima de R$ 80",
       "7_to_12": "Sem juros, parcela mínima de R$ 100"
     },
-    "notes": "O documento também apresenta uma regra geral de parcela mínima de R$ 100, que precisa de confirmação para condições inferiores."
+    "installments_note": "As condições para 1 a 3 parcelas não estão definidas nesta base; não informar valor mínimo sem confirmação."
   },
   "returns": {
     "online_purchase_withdrawal": {
       "request_deadline_days": 7,
       "deadline_starts_at": "product_receipt"
     },
-    "refund": {
-      "processing_deadline_business_days": 10
+    "defective_product": {
+      "legal_claim_period_days_for_durable_goods": 90,
+      "usual_remedy_period_days": 30,
+      "notes": "O prazo de 30 dias refere-se em regra à solução do vício, não a um prazo de troca automática. Há exceções legais. Para vício oculto, a contagem do prazo de reclamação começa quando o problema se manifesta."
     },
-    "manufacturing_defect": {
-      "exchange_deadline_days": 30
-    }
+    "refund_note": "O prazo operacional de reembolso da loja não está confirmado nesta base. Em arrependimento, observar os direitos previstos no CDC."
   },
   "shipping": {
     "metro_free_shipping_min_brl": 500,
@@ -43,7 +47,7 @@
       "SEDEX": "2 a 5 dias úteis",
       "Jadlog": "3 a 8 dias úteis"
     },
-    "notes": "Fora da região metropolitana, o frete depende de CEP, peso e dimensões."
+    "notes": "Os prazos informados são estimativas e dependem de confirmação do frete e do endereço de entrega. Fora da região metropolitana, o custo depende de CEP, peso e dimensões."
   },
   "promotions": {
     "stackable": false,
@@ -57,17 +61,17 @@
     "whatsapp": "(67) 3321-4500",
     "tone": "Informal, profissional, cordial e objetivo",
     "complaints": "Registrar e encaminhar ao responsável",
-    "complaint_response": "24 horas úteis"
+    "complaint_response_note": "Não há prazo de resposta confirmado na base."
   },
   "warranty": {
     "legal_warranty_days": 90,
-    "reference": "Recebimento do produto",
+    "reference": "Recebimento do produto para vícios aparentes ou de fácil constatação; vício oculto conta da manifestação do defeito.",
     "manufacturer_warranty": "Conforme certificado do fabricante",
-    "notes": "Não cobre mau uso, quedas, modificações não autorizadas e desgaste natural."
+    "notes": "A garantia legal não pode ser excluída pela política da loja. Danos decorrentes de mau uso não são automaticamente considerados vícios de fabricação."
   },
   "privacy": {
     "personal_data": "Utilizados para pedidos, entregas e obrigações legais",
     "marketing": "Depende de consentimento explícito",
-    "deletion": "Solicitação por WhatsApp ou e-mail"
+    "deletion": "Solicitação pelo canal de atendimento oficial informado em service."
   }
 }
