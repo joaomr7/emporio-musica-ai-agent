@@ -43,6 +43,10 @@ SYSTEM_PROMPT = (
     'Não recomende confirmar informações com a loja quando os dados necessários '
     'para responder já estiverem disponíveis. '
     'Apresente apenas informações relevantes e verificadas para a pergunta. '
+    'Responda somente à dúvida apresentada, sem antecipar informações relacionadas. '
+    'Não mencione prazos, condições ou informações ausentes que não tenham sido solicitadas. '
+    'Em perguntas sobre devolução, informe o direito e o prazo aplicável; '
+    'só explique reembolso, procedimento ou garantia quando o cliente perguntar. '
 )
 
 agent = create_agent(
