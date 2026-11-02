@@ -1,0 +1,73 @@
+{
+  "store": {
+    "name": "Empório da Música",
+    "address": "Rua 14 de Maio, 3200 — Centro, Campo Grande - MS",
+    "phone": "(67) 3341-4444",
+    "hours": {
+      "weekdays": "09:00 às 18:00",
+      "saturday": "09:00 às 13:00",
+      "sunday_holidays": "Fechado"
+    },
+    "business": "Venda exclusiva de instrumentos musicais, sem acessórios"
+  },
+  "payment": {
+    "methods": ["PIX", "Débito", "Crédito", "Boleto"],
+    "pix_discount_percent": 5,
+    "pix_discount_with_promotions": false,
+    "credit_max_installments": 12,
+    "installments": {
+      "1_to_3": "Sem juros, conforme condições mínimas da loja",
+      "4_to_6": "Sem juros, parcela mínima de R$ 80",
+      "7_to_12": "Sem juros, parcela mínima de R$ 100"
+    },
+    "notes": "O documento também apresenta uma regra geral de parcela mínima de R$ 100, que precisa de confirmação para condições inferiores."
+  },
+  "returns": {
+    "online_purchase_withdrawal": {
+      "request_deadline_days": 7,
+      "deadline_starts_at": "product_receipt"
+    },
+    "refund": {
+      "processing_deadline_business_days": 10
+    },
+    "manufacturing_defect": {
+      "exchange_deadline_days": 30
+    }
+  },
+  "shipping": {
+    "metro_free_shipping_min_brl": 500,
+    "metro_shipping_fee_brl": 35,
+    "metro_delivery": "1 a 3 dias úteis",
+    "other_cities": {
+      "PAC": "5 a 12 dias úteis",
+      "SEDEX": "2 a 5 dias úteis",
+      "Jadlog": "3 a 8 dias úteis"
+    },
+    "notes": "Fora da região metropolitana, o frete depende de CEP, peso e dimensões."
+  },
+  "promotions": {
+    "stackable": false,
+    "pix_discount_stackable": false,
+    "require_stock": true,
+    "display_original_price": true,
+    "notes": "A vigência e os descontos devem ser confirmados na base de promoções."
+  },
+  "service": {
+    "channel": "WhatsApp",
+    "whatsapp": "(67) 3321-4500",
+    "tone": "Informal, profissional, cordial e objetivo",
+    "complaints": "Registrar e encaminhar ao responsável",
+    "complaint_response": "24 horas úteis"
+  },
+  "warranty": {
+    "legal_warranty_days": 90,
+    "reference": "Recebimento do produto",
+    "manufacturer_warranty": "Conforme certificado do fabricante",
+    "notes": "Não cobre mau uso, quedas, modificações não autorizadas e desgaste natural."
+  },
+  "privacy": {
+    "personal_data": "Utilizados para pedidos, entregas e obrigações legais",
+    "marketing": "Depende de consentimento explícito",
+    "deletion": "Solicitação por WhatsApp ou e-mail"
+  }
+}
