@@ -5,8 +5,9 @@ class Settings(BaseSettings):
     test_database_url: str
     
     llm_base_url: str
-    llm_model: str
     llm_api_key: str
+    llm_model: str
+    embedding_model: str
 
     model_config = SettingsConfigDict(env_file=".env")
 

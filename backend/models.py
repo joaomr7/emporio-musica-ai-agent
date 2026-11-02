@@ -1,6 +1,8 @@
 from tortoise import fields
 from tortoise.models import Model
 
+from backend.search.fields import VectorField
+
 class Category(Model):
     category_id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=150)
@@ -102,3 +104,14 @@ class ProcessingTask(Model):
 
     class Meta:
         table = 'processing_tasks'
+
+class ProductSearchIndex(Model):
+    product = fields.OneToOneField('models.Product', related_name='search_index', primary_key=True)
+    search_text = fields.TextField()
+    embedding = VectorField()
+    content_hash = fields.CharField(max_length=64)
+    model_version = fields.CharField(max_length=128)
+    indexed_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = 'product_search_index'

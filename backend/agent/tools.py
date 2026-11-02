@@ -1,11 +1,11 @@
 import json
-from decimal import Decimal
 from pathlib import Path
 
 from langchain.tools import ToolRuntime, tool
 
 from backend.agent.context import AgentContext
 from backend.models import Category, Order, Product
+from backend.search.retrieval import search_products as retrieve_products
 
 POLICIES_PATH = Path(__file__).resolve().parent.parent / 'policies' / 'store.json'
 
@@ -28,7 +28,6 @@ async def list_categories() -> str:
         for category in categories
     ], ensure_ascii=False)
 
-
 @tool
 async def search_products(
     query: str = '',
@@ -38,67 +37,26 @@ async def search_products(
     limit: int = 10,
     offset: int = 0
 ) -> str:
-    '''Busque e compare produtos por nome, categoria, orçamento ou disponibilidade.
+    '''Consulta produtos com filtros e paginação.
 
-    Parâmetros: query é um trecho do nome, sem distinção entre maiúsculas e minúsculas
-    (ex.: Yamaha ou C40); não pesquisa descrição ou specs. Para tipos de instrumento,
-    consulte list_categories e informe category_id em vez de usar uma categoria genérica
-    em query. query vazio não restringe o nome. max_price é o preço máximo inclusivo em
-    reais, não negativo; null não restringe o preço. available_only=True retorna apenas
-    produtos ativos com estoque positivo; False inclui também inativos e sem estoque.
-    Os filtros informados são combinados. limit aceita 1 a 30 (padrão 10) e offset é a
-    quantidade de resultados a pular, não negativa (padrão 0).
+    Com query, utiliza busca vetorial por similaridade semântica.
+    Sem query, utiliza apenas filtros SQL e ordenação por preço.
 
-    Retorna uma string JSON com total, limit, offset, has_more, next_offset e products.
-    Cada produto contém product_id, name, category (nome), description, price_brl,
-    stock_quantity e specs (dados técnicos ou null).
-    Para continuar, mantenha os filtros e use next_offset quando has_more=True.
+    category_id identifica a categoria, max_price define o preço máximo
+    e available_only restringe a produtos ativos com estoque.
+
+    Para consultar outras páginas, utilize next_offset.
     '''
-    if not 1 <= limit <= 30:
-        return 'O limite deve estar entre 1 e 30.'
+    result = await retrieve_products(
+        query=query,
+        category_id=category_id,
+        max_price=max_price,
+        available_only=available_only,
+        limit=limit,
+        offset=offset
+    )
 
-    if offset < 0:
-        return 'O offset não pode ser negativo.'
-
-    products = Product.all().select_related('category')
-
-    if query:
-        products = products.filter(name__icontains=query.strip())
-
-    if category_id is not None:
-        products = products.filter(category_id=category_id)
-
-    if max_price is not None:
-        if max_price < 0:
-            return 'O preço máximo não pode ser negativo.'
-
-        products = products.filter(price_brl__lte=Decimal(str(max_price)))
-
-    if available_only:
-        products = products.filter(stock_quantity__gt=0, status='active')
-
-    total = await products.count()
-    results = await products.order_by('price_brl', 'product_id').offset(offset).limit(limit)
-
-    return json.dumps({
-        'total': total,
-        'limit': limit,
-        'offset': offset,
-        'has_more': offset + len(results) < total,
-        'next_offset': offset + len(results) if offset + len(results) < total else None,
-        'products': [
-            {
-                'product_id': product.product_id,
-                'name': product.name,
-                'category': product.category.name,
-                'description': product.description,
-                'price_brl': str(product.price_brl),
-                'stock_quantity': product.stock_quantity,
-                'specs': product.specs
-            }
-            for product in results
-        ]
-    }, ensure_ascii=False)
+    return json.dumps(result, ensure_ascii=False)
 
 @tool
 async def get_product(product_id: int) -> str:
